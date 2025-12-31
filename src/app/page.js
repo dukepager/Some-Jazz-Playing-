@@ -1,21 +1,17 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Some Jazz Playing — MINI ZINE LANDING
+ * Some Jazz Playing — MINI ZINE LANDING (full-bleed, borderless)
+ * + Background music/radio
  *
- * What you asked for:
- * - Black background
- * - Photos feel like magazine pages/spreads (paper, margins, print vibe)
- * - Photos auto-change (self-discovery)
- * - Simple “Enter” text (not a button)
- * - “store will be back soon” small text under
- *
- * Setup:
- * Put images in /public/zine/ (Next.js) or serve them at /zine/... (any host)
+ * Note on autoplay with sound:
+ * Most browsers block autoplay WITH audio until the user interacts.
+ * This page will *try* to autoplay unmuted; if blocked, it shows a tiny “Sound on” prompt.
  */
 
+// 1) Put images in /public/zine/ (Next.js) or serve them at /zine/... (any host)
 const IMAGES = [
   { src: "/zine/npr.brightspotcdn.png", alt: "Jazz" },
   { src: "/zine/Mo-Better-Blues-h.jpg", alt: "Jazz" },
@@ -29,9 +25,73 @@ const IMAGES = [
   { src: "/zine/Miles-Davis-in-1989-006.avif", alt: "Jazz" },
 ];
 
+// 2) Background audio
+// Use an mp3 you host (recommended) OR a stream URL.
+// Example: const STREAM_URL = "/audio/sjp-radio.mp3"; (put file in /public/audio/)
+const STREAM_URL = "https://icecast.radiofrance.fr/fip-hifi.aac";
+
 function safeImg(item) {
   if (!item || typeof item.src !== "string" || item.src.trim() === "") return null;
   return { src: item.src, alt: item.alt || "Some Jazz Playing" };
+}
+
+function useAutoplayAudio(src) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [needsTap, setNeedsTap] = useState(false);
+  const [volume, setVolume] = useState(0.75);
+
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    a.volume = volume;
+  }, [volume]);
+
+  // Try to autoplay (unmuted)
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+
+    a.muted = false;
+    a.volume = volume;
+
+    const tryPlay = async () => {
+      try {
+        await a.play();
+        setPlaying(true);
+        setNeedsTap(false);
+      } catch {
+        // Autoplay blocked until user gesture
+        setPlaying(false);
+        setNeedsTap(true);
+      }
+    };
+
+    // small delay helps some environments
+    const t = setTimeout(tryPlay, 150);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src]);
+
+  const toggle = async () => {
+    const a = audioRef.current;
+    if (!a) return;
+    try {
+      if (a.paused) {
+        a.muted = false;
+        await a.play();
+        setPlaying(true);
+        setNeedsTap(false);
+      } else {
+        a.pause();
+        setPlaying(false);
+      }
+    } catch {
+      setNeedsTap(true);
+    }
+  };
+
+  return { audioRef, playing, needsTap, volume, setVolume, toggle };
 }
 
 function MagazineFrame({ children, rotate = 0, className = "" }) {
@@ -43,16 +103,12 @@ function MagazineFrame({ children, rotate = 0, className = "" }) {
       }
       style={{ transform: `rotate(${rotate}deg)` }}
     >
-      {/* full-bleed image only — no borders, no paper */}
-      <div className="relative h-full w-full overflow-hidden rounded-[32px]">
-        {children}
-      </div>
+      <div className="relative h-full w-full overflow-hidden rounded-[32px]">{children}</div>
     </div>
   );
 }
 
 function AutoPhoto({ images, index, altFallback }) {
-  // Cross-fade: render previous + current
   const safe = images[index % images.length];
   const [shown, setShown] = useState(safe?.src);
   const [fadeIn, setFadeIn] = useState(true);
@@ -70,7 +126,6 @@ function AutoPhoto({ images, index, altFallback }) {
 
   return (
     <div className="relative h-full w-full">
-      {/* image */}
       <img
         key={shown}
         src={shown}
@@ -81,14 +136,12 @@ function AutoPhoto({ images, index, altFallback }) {
         }
         draggable={false}
       />
-      {/* subtle print grain */}
       <div className="pointer-events-none absolute inset-0 opacity-[0.10] mix-blend-multiply bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.35),transparent_40%),radial-gradient(circle_at_70%_60%,rgba(0,0,0,0.28),transparent_45%)]" />
     </div>
   );
 }
 
 function ZineCollage({ images }) {
-  // Global tick that advances images
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -101,18 +154,20 @@ function ZineCollage({ images }) {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
-      {/* Full-screen magazine spreads */}
-      <MagazineFrame rotate={-4} className="left-[-5%] top-[-5%] h-[70%] w-[60%]">
+      <MagazineFrame rotate={-4} className="left-[-8%] top-[-10%] h-[76%] w-[66%]">
         <AutoPhoto images={images} index={idx(0)} altFallback="Some Jazz Playing" />
       </MagazineFrame>
 
-      <MagazineFrame rotate={6} className="right-[-6%] top-[4%] h-[80%] w-[45%]">
+      <MagazineFrame rotate={6} className="right-[-10%] top-[2%] h-[86%] w-[52%]">
         <AutoPhoto images={images} index={idx(2)} altFallback="Some Jazz Playing" />
       </MagazineFrame>
 
-      <MagazineFrame rotate={2} className="left-[10%] bottom-[-8%] h-[40%] w-[55%]">
+      <MagazineFrame rotate={2} className="left-[6%] bottom-[-14%] h-[50%] w-[70%]">
         <AutoPhoto images={images} index={idx(4)} altFallback="Some Jazz Playing" />
       </MagazineFrame>
+
+      {/* soft vignette on top of images */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(0,0,0,0.20),rgba(0,0,0,0.85))]" />
     </div>
   );
 }
@@ -121,23 +176,18 @@ export default function Page() {
   const images = useMemo(() => IMAGES.map(safeImg).filter(Boolean), []);
   const hasImages = images.length > 0;
 
+  const audio = useAutoplayAudio(STREAM_URL);
+
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* vignette */}
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.08),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.10),rgba(0,0,0,0.92))]" />
-      </div>
+      {/* audio element */}
+      <audio ref={audio.audioRef} src={STREAM_URL} preload="none" loop />
 
-      <main className="relative w-screen h-screen px-0 py-0">
-        {hasImages ? (
-          <ZineCollage images={images} />
-        ) : (
-          <div className="relative h-screen w-screen bg-black" />
-        )}
+      <main className="relative w-screen h-screen">
+        {hasImages ? <ZineCollage images={images} /> : <div className="h-screen w-screen bg-black" />}
 
         {/* Centered text only */}
-        <div className="pointer-events-auto absolute inset-0 z-10 flex flex-col items-center justify-center text-center">
+        <div className="pointer-events-auto absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6">
           <h1 className="text-[clamp(3rem,10vw,8rem)] font-semibold tracking-tight leading-none">
             SOME JAZZ PLAYING
           </h1>
@@ -150,10 +200,39 @@ export default function Page() {
           </a>
         </div>
 
-        <footer className="mt-10 flex items-center justify-between text-xs text-white/45">
-          <span>© {new Date().getFullYear()} Some Jazz Playing</span>
-          <span className="hidden sm:inline">mini zine landing</span>
-        </footer>
+        {/* Minimal audio control (only shows if autoplay is blocked OR user wants control) */}
+        <div className="pointer-events-auto absolute bottom-5 right-5 z-20">
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/55 px-3 py-2 text-xs text-white/80 backdrop-blur">
+            {audio.needsTap ? (
+              <button
+                onClick={audio.toggle}
+                className="rounded-full bg-white/10 px-3 py-1.5 hover:bg-white/15"
+                title="Enable audio"
+              >
+                Sound on
+              </button>
+            ) : (
+              <button
+                onClick={audio.toggle}
+                className="rounded-full bg-white/10 px-3 py-1.5 hover:bg-white/15"
+                title={audio.playing ? "Pause" : "Play"}
+              >
+                {audio.playing ? "Pause" : "Play"}
+              </button>
+            )}
+
+            <input
+              aria-label="volume"
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={audio.volume}
+              onChange={(e) => audio.setVolume(Number(e.target.value))}
+              className="w-24 accent-white/70"
+            />
+          </div>
+        </div>
       </main>
     </div>
   );
