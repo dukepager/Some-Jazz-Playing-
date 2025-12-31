@@ -23,12 +23,12 @@ import {
  * You only need YouTube IDs (NOT the full <iframe> embed code).
  */
 
-// Swap these
+// 1) Swap these
 const STREAM_URL = "https://icecast.radiofrance.fr/fip-hifi.aac"; // your live radio stream URL
 const TIKTOK_URL = "https://www.tiktok.com/@somejazzplaying"; // your TikTok
 const LIVESTREAM_NOTE = "Live stream: every other Sunday · 3–5 PM"; // edit anytime
 
-// Add new videos monthly (YYYY-MM)
+// 2) Add new videos monthly (YYYY-MM)
 const VIDEOS = [
   { id: "J4VWEwUp7qU", title: "Live Session", month: "2025-12" },
   { id: "eAzClkn3zYw", title: "Interview", month: "2025-12" },
@@ -109,7 +109,7 @@ function YouTubeEmbed({ id, title }) {
         />
       </div>
 
-      {/* reveal title on hover (desktop), show by default on mobile */}
+      {/* Only reveal title on hover (desktop) */}
       <div className="pointer-events-none p-4 opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100">
         <div className="text-sm font-semibold text-white">{title}</div>
         <div className="mt-1 text-xs text-white/55">YouTube</div>
@@ -155,15 +155,16 @@ function FreeformGallery({ videos, mode, months, activeMonth, setActiveMonth }) 
         </div>
       ) : null}
 
-      {/* Mobile */}
+      {/* Mobile layout */}
       <div className="grid gap-6 md:hidden">
         {videos.map((v) => (
           <YouTubeEmbed key={v.id} id={v.id} title={v.title} />
         ))}
       </div>
 
-      {/* Desktop freeform */}
+      {/* Desktop freeform layout */}
       <div className="relative hidden min-h-[980px] md:block">
+        {/* faint paper cards behind */}
         <div className="absolute inset-0">
           <div
             className="absolute left-[8%] top-[18%] h-[560px] w-[78%] rounded-[42px] border border-white/10 bg-white/5 backdrop-blur"
@@ -256,7 +257,7 @@ function FreeformStack({ featured }) {
   );
 }
 
-export default function Page() {
+export default function SomeJazzPlayingSite() {
   const audio = useAudio(STREAM_URL);
 
   const months = useMemo(() => {
@@ -280,15 +281,16 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Background */}
+      {/* Ambient background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.08),transparent_45%),radial-gradient(circle_at_85%_10%,rgba(255,255,255,0.06),transparent_45%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.35),rgba(0,0,0,0.9))]" />
       </div>
 
+      {/* Hidden audio */}
       <audio ref={audio.audioRef} src={STREAM_URL} preload="none" />
 
-      {/* Minimal header */}
+      {/* Header (minimal) */}
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/60 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
@@ -408,6 +410,35 @@ export default function Page() {
             setActiveMonth={setActiveMonth}
           />
         </section>
+
+        <footer className="border-t border-white/10 bg-black/55">
+          <div className="mx-auto max-w-6xl px-4 py-10">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="text-sm text-white/70">© {new Date().getFullYear()} Some Jazz Playing</div>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={TIKTOK_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/80 hover:bg-white/10"
+                >
+                  TikTok
+                </a>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70">
+                  <Calendar className="h-4 w-4 opacity-80" /> {LIVESTREAM_NOTE}
+                </span>
+                <a
+                  href={VIDEOS[0] ? `https://www.youtube.com/watch?v=${VIDEOS[0].id}` : "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/80 hover:bg-white/10"
+                >
+                  YouTube
+                </a>
+              </div>
+            </div>
+          </div>
+        </footer>
       </main>
     </div>
   );
